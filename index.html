@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Monatsbudget App – FINAL</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Cache komplett deaktivieren -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+
+    .card {
+      max-width: 360px;
+      margin: auto;
+      background: #ffffff;
+      padding: 18px;
+      border-radius: 14px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .row input {
+      flex: 1;
+      padding: 8px;
+      font-size: 0.95rem;
+    }
+
+    .row input:disabled {
+      background: #eeeeee;
+    }
+
+    .spacer {
+      margin-top: 18px;
+    }
+
+    button {
+      margin-top: 8px;
+      width: 100%;
+      padding: 9px;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 8px;
+      background: #4f46e5;
+      color: white;
+      cursor: pointer;
+    }
+
+    .warn {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .result {
+      margin-top: 12px;
+      font-weight: bold;
+      color: #111827;
+    }
+
+    ul {
+      padding-left: 18px;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>Monatliches Budget</h1>
+
+    <!-- Monat -->
+    <div class="row">
+      <input type="number" id="monatssumme" placeholder="Monatssumme €">
+      <input type="text" id="tagessumme" placeholder="Tagessumme €" disabled>
+    </div>
+
+    <!-- Heute -->
+    <div class="row">
+      <input type="number" id="ausgabe" placeholder="Ausgabe heute €">
+      <input type="text" id="restHeute" placeholder="Rest heute €" disabled>
+    </div>
+
+    <!-- ABSICHTLICHER ABSTAND -->
+    <div class="spacer"></div>
+
+    <!-- Buttons -->
+    <button onclick="aktualisieren()">Aktualisieren</button>
+    <button onclick="ausgabeBuchen()">Ausgabe buchen</button>
+
+    <!-- Anzeigen -->
+    <div class="warn" id="warnung"></div>
+    <div class="result" id="anzeige"></div>
+
+    <h3>Verlauf</h3>
+    <ul id="verlauf"></ul>
+  </div>
+
+<script>
+/* ===== Datum ===== */
+const heute = new Date();
+const tageImMonat = new Date(
+  heute.getFullYear(),
+  heute.getMonth() + 1,
+  0
+).getDate();
+
+/* ===== State ===== */
+let state = JSON.parse(localStorage.getItem("budget_state_final")) || {
+  monatssumme: 0,
+  ausgaben: []
+};
+
+/* ===== Init ===== */
+function init() {
+  document.getElementById("monatssumme").value = state.monatssumme;
+  updateAnzeige();
+}
+
+/* ===== Berechnungen ===== */
+function berechneTagessumme() {
+  return state.monatssumme / tageImMonat;
+}
+
+function berechneAktuellesBudget() {
+  let rest = state.monatssumme;
+  state.ausgaben.forEach(a => rest -= a.betrag);
+  return rest;
+}
+
+/* ===== Aktionen ===== */
+function aktualisieren() {
+  state.monatssumme = Number(
+    document.getElementById("monatssumme").value
+  );
+  speichern();
+  updateAnzeige();
+}
+
+function ausgabeBuchen() {
+  const ausgabe = Number(
+    document.getElementById("ausgabe").value
+  );
+  if (!ausgabe) return;
+
+  state.ausgaben.push({
+    datum: new Date().toLocaleDateString(),
+    betrag: ausgabe
+  });
+
+  document.getElementById("ausgabe").value = "";
+  speichern();
+  updateAnzeige();
+}
+
+/* ===== Anzeige ===== */
+function updateAnzeige() {
+  const tagessumme = berechneTagessumme();
+
+  document.getElementById("tagessumme").value =
+    tagessumme.toFixed(2);
+
+  document.getElementById("restHeute").value =
+    tagessumme.toFixed(2);
+
+  document.getElementById("anzeige").innerText =
+    `Aktuelles Budget: ${berechneAktuellesBudget().toFixed(2)} €`;
+
+  document.getElementById("verlauf").innerHTML =
+    state.ausgaben
+      .map(a => `<li>${a.datum}: -${a.betrag.toFixed(2)} €</li>`)
+      .join("");
+
+  document.getElementById("warnung").innerText =
+    tagessumme < 0 ? "⚠️ Tagesbudget überschritten!" : "";
+}
+
+/* ===== Speicher ===== */
+function speichern() {
+  localStorage.setItem("budget_state_final", JSON.stringify(state));
+}
+
+init();
+</script>
+</body>
+</html>
